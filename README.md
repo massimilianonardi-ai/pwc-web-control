@@ -53,6 +53,7 @@ web-control page capture <page> <output-dir> [html|text|screenshot|mhtml]...
 web-control page click <page> <target>
 web-control page fill <page> <target> <value>
 web-control page press <page> <target> <key>
+web-control page scroll <page> <delta-y>
 web-control debug cdp <page> <method> [params-json]
 ```
 
@@ -87,3 +88,7 @@ npm run build
 The GitHub project and installable package are named `pwc-web-control`. The portable facility/command/service remain `web-control`. Releases v0.1.0 through v0.1.3 retain their original `rumiai-web-control-v<version>-all.tar.gz` asset names and payload layouts; they are not rebuilt or relabeled. The new archive naming begins at v0.1.4.
 
 Installed `rumiai-web-control` and `pwc-web-control` are separate package identities with separate managed HOME/profile state. Installing the new provider does not automatically move cookies or authenticated sessions from the previous package. When running directly without `WEB_CONTROL_HOME`, the legacy standalone `~/.rumiai-web-control` profile fallback and derived socket prefix are intentionally retained so a source update does not discard or hide an existing user profile. Normal `m` package launch always provides its own managed HOME.
+
+## Portable document scrolling
+
+`web-control page scroll <page> <delta-y>` moves by a signed vertical CSS-pixel amount; zero observes without moving. It returns `page`, `scrollY`, `documentHeight`, `viewportHeight`, and `atBottom`. These are instantaneous document metrics, not a completeness guarantee for lazy-loaded sites. It is the same provider-independent operation implemented by Electron; no caller-facing CDP protocol or JavaScript-evaluation method is involved. `debug cdp` remains an optional provider-specific debugging extension, not an application dependency.

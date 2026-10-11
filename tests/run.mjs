@@ -103,6 +103,14 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 50));
   }
 
+  const position = await cli('page', 'scroll', page.id, '0');
+  assert.equal(position.page, page.id);
+  assert.equal(typeof position.documentHeight, 'number');
+  assert.equal(typeof position.viewportHeight, 'number');
+  assert.equal(typeof position.atBottom, 'boolean');
+  const moved = await cli('page', 'scroll', page.id, '400');
+  assert.ok(moved.scrollY >= position.scrollY);
+  await assert.rejects(() => cli('page', 'scroll', page.id, 'not-a-number'));
   const capture = await cli('page', 'capture', page.id, captureDir, 'html', 'text', 'screenshot', 'mhtml');
   for (const filename of Object.values(capture.files)) {
     const stat = await fs.stat(filename);

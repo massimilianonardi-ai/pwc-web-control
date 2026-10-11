@@ -266,6 +266,23 @@ async function dispatch(method, params = {}) {
       }
     }
 
+    case 'page.scroll': {
+      const page = requirePage(params.page);
+      if (!Number.isSafeInteger(params.deltaY)) throw new Error('page.scroll requires a signed integer CSS-pixel delta');
+      const geometry = await page.evaluate((deltaY) => {
+        window.scrollBy(0, deltaY);
+        const root = document.documentElement;
+        const body = document.body;
+        const documentHeight = Math.max(root?.scrollHeight || 0, root?.offsetHeight || 0,
+          body?.scrollHeight || 0, body?.offsetHeight || 0);
+        const scrollY = window.scrollY;
+        const viewportHeight = window.innerHeight;
+        return { scrollY, documentHeight, viewportHeight,
+          atBottom: scrollY + viewportHeight >= documentHeight - 20 };
+      }, params.deltaY);
+      return { page: params.page, ...geometry };
+    }
+
     case 'page.capture':
       return capturePage(params.page, requirePage(params.page), params);
 
