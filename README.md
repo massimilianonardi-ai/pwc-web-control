@@ -91,4 +91,6 @@ Installed `rumiai-web-control` and `pwc-web-control` are separate package identi
 
 ## Portable document scrolling
 
+Playwright v0.1.5 realizes the new, complete `web-control 2` compatibility contract. Previously published releases still realize immutable `web-control 1`; the package resolver does not infer compatibility across levels. Consumers of the scrolling feature must require compatibility level `2` explicitly.
+
 `web-control page scroll <page> <delta-y>` moves by a signed vertical CSS-pixel amount; zero observes without moving. It returns `page`, `scrollY`, `documentHeight`, `viewportHeight`, and `atBottom`. These are instantaneous document metrics, not a completeness guarantee for lazy-loaded sites. It is the same provider-independent operation implemented by Electron; no caller-facing CDP protocol or JavaScript-evaluation method is involved. `debug cdp` remains an optional provider-specific debugging extension, not an application dependency.
