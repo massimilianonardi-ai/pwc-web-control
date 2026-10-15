@@ -30,6 +30,10 @@ function usage() {
     '  web-control page fill <page> <target> <value>',
     '  web-control page press <page> <target> <key>',
     '  web-control page scroll <page> <delta-y>',
+    '  web-control debug session open <page>',
+    '  web-control debug session send <session> <method> [params-json]',
+    '  web-control debug session events <session> [after] [limit] [wait-ms]',
+    '  web-control debug session close <session>',
     '  web-control debug cdp <page> <method> [params-json]'
   ].join('\n');
 }
@@ -57,6 +61,35 @@ function parse(argv) {
     if (op === 'fill' && argv.length === 5) return { method: 'page.fill', params: { page: argv[2], target: argv[3], value: argv[4] } };
     if (op === 'press' && argv.length === 5) return { method: 'page.press', params: { page: argv[2], target: argv[3], key: argv[4] } };
     if (op === 'scroll' && argv.length === 4 && /^-?\d+$/.test(argv[3]) && Number.isSafeInteger(Number(argv[3]))) return { method: 'page.scroll', params: { page: argv[2], deltaY: Number(argv[3]) } };
+  }
+  if (argv[0] === 'debug' && argv[1] === 'session') {
+    const op = argv[2];
+    if (op === 'open' && argv.length === 4)
+      return { method: 'debug.session.open', params: { page: argv[3] } };
+    if (op === 'close' && argv.length === 4)
+      return { method: 'debug.session.close', params: { session: argv[3] } };
+    if (op === 'send' && (argv.length === 5 || argv.length === 6)) {
+      let params = {};
+      if (argv[5]) {
+        try { params = JSON.parse(argv[5]); }
+        catch { invalid('invalid debugger params JSON'); }
+      }
+      return { method: 'debug.session.send', params: {
+        session: argv[3], method: argv[4], params
+      } };
+    }
+    if (op === 'events' && argv.length >= 4 && argv.length <= 7) {
+      const operands = argv.slice(4);
+      if (operands.some((x) => !/^[0-9]+$/.test(x) || !Number.isSafeInteger(Number(x))))
+        invalid('invalid debugger event cursor/limit/wait');
+      return { method: 'debug.session.events', params: {
+        session: argv[3],
+        after: operands[0] === undefined ? 0 : Number(operands[0]),
+        limit: operands[1] === undefined ? 100 : Number(operands[1]),
+        waitMs: operands[2] === undefined ? 0 : Number(operands[2])
+      } };
+    }
+    invalid('invalid debugger session invocation');
   }
   if (argv[0] === 'debug' && argv[1] === 'cdp' && (argv.length === 4 || argv.length === 5)) {
     let params = {};
