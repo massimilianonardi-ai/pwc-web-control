@@ -62,4 +62,16 @@ export async function checkPersistentDebug(cli, page, baseUrl) {
     () => cli('debug', 'session', 'events', id),
     /debug.session-not-found/
   );
+  // The historical one-shot CDP command now behaves on both providers.
+  const oneShot = await cli('debug', 'cdp', page, 'Runtime.evaluate',
+    JSON.stringify({ expression: 'document.title', returnByValue: true }));
+  assert.equal(typeof oneShot.result?.value, 'string');
+
+  const temporary = (await cli('page', 'new')).id;
+  const ephemeral = (await cli('debug', 'session', 'open', temporary)).session;
+  await cli('page', 'close', temporary);
+  await assert.rejects(
+    () => cli('debug', 'session', 'send', ephemeral, 'Runtime.enable'),
+    /debug.session-not-found/
+  );
 }
