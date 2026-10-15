@@ -6,6 +6,14 @@ export async function createFixtureServer() {
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://fixture.invalid');
 
+    if (url.pathname === '/debug-trigger') {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(html('<h1 id="debug-trigger">debug-trigger</h1>', `
+        window.__debugTick = 0;
+        setInterval(() => { window.__debugTick += 1; }, 25);
+      `));
+      return;
+    }
     if (url.pathname === '/api/value') {
       res.writeHead(200, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ value: 'dynamic-ready' }));
