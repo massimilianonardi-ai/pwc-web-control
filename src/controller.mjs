@@ -4,6 +4,7 @@ import path from 'node:path';
 import process from 'node:process';
 import { chromium } from 'playwright';
 import { webControlHome, webControlSocketPath } from './runtime.mjs';
+import { DebugSessions } from './debug-sessions.mjs';
 
 const HOME = webControlHome();
 const PROFILE = process.env.WEB_CONTROL_PROFILE || 'default';
@@ -48,6 +49,7 @@ async function writeStorageState(state) {
 
 let savedStorageState = await loadStorageState();
 
+const debugSessions = new DebugSessions();
 let nextPageId = 1;
 const pages = new Map();
 const pageIds = new WeakMap();
@@ -60,7 +62,7 @@ function registerPage(page) {
   id = `page-${nextPageId++}`;
   pages.set(id, page);
   pageIds.set(page, id);
-  page.once('close', () => pages.delete(id));
+  page.once('close', () => { pages.delete(id); void debugSessions.closePage(id); });
   return id;
 }
 
@@ -82,6 +84,7 @@ async function launchBrowser() {
     if (context === launchedContext) {
       context = null;
       pages.clear();
+      void debugSessions.closeAll();
     }
   });
 
@@ -304,6 +307,29 @@ async function dispatch(method, params = {}) {
       return { page: params.page, target: params.target, key: params.key };
     }
 
+    case 'debug.session.open': {
+      const page = requirePage(params.page);
+      return debugSessions.open(params.page, async () => {
+        const session = await page.context().newCDPSession(page);
+        return {
+          send: (method, args) => session.send(method, args),
+          onEvent: (handler) => session.on('event', ({ method, params: data }) => handler(method, data)),
+          onClose: (handler) => session.once('close', handler),
+          close: () => session.detach()
+        };
+      });
+    }
+
+    case 'debug.session.send':
+      return { session: params.session,
+        result: await debugSessions.send(params.session, params.method, params.params ?? {}) };
+
+    case 'debug.session.events':
+      return debugSessions.events(params.session, params.after, params.limit, params.waitMs);
+
+    case 'debug.session.close':
+      return debugSessions.close(params.session);
+
     case 'debug.cdp': {
       const page = requirePage(params.page);
       if (!params.method || typeof params.method !== 'string') throw new Error('debug.cdp requires method');
@@ -392,6 +418,7 @@ async function shutdown(code) {
     exitCode = 1;
   });
 
+  await debugSessions.closeAll();
   const activeContext = context;
   if (activeContext) {
     try {
