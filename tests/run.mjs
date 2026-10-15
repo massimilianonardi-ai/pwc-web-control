@@ -7,6 +7,7 @@ import { spawn, execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { createFixtureServer } from './fixture-server.mjs';
+import { checkPersistentDebug } from './debug-integration.mjs';
 import { webControlSocketPath } from '../src/runtime.mjs';
 
 const execFileAsync = promisify(execFile);
@@ -124,6 +125,8 @@ try {
     returnByValue: true
   }));
   assert.equal(cdp.result.value, 'dynamic-ready');
+
+  await checkPersistentDebug(cli, page.id, fixture.baseUrl);
 
   await cli('page', 'navigate', page.id, `${fixture.baseUrl}/login`);
   await cli('page', 'click', page.id, '#login');
