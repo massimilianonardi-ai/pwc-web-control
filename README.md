@@ -94,3 +94,26 @@ Installed `rumiai-web-control` and `pwc-web-control` are separate package identi
 Playwright v0.1.5 realizes the new, complete `web-control 2` compatibility contract. Previously published releases still realize immutable `web-control 1`; the package resolver does not infer compatibility across levels. Consumers of the scrolling feature must require compatibility level `2` explicitly.
 
 `web-control page scroll <page> <delta-y>` moves by a signed vertical CSS-pixel amount; zero observes without moving. It returns `page`, `scrollY`, `documentHeight`, `viewportHeight`, and `atBottom`. These are instantaneous document metrics, not a completeness guarantee for lazy-loaded sites. It is the same provider-independent operation implemented by Electron; no caller-facing CDP protocol or JavaScript-evaluation method is involved. `debug cdp` remains an optional provider-specific debugging extension, not an application dependency.
+
+## Persistent debugger sessions (source implementation of web-control 3)
+
+The current source implements the **same** new, page-scoped persistent debugger commands as the other first-party Chromium provider. The canonical contract is `rumiai-dev/specifications/rumiai-os/WEB-CONTROL.md` §6. This functionality is **not part of already published web-control 1/2 packages**; a new package release and explicit compatibility-3 facility declaration are required before installed consumers can assume it.
+
+```sh
+web-control debug session open page-1
+# -> {"session":"debug-1","page":"page-1"}
+
+web-control debug session send debug-1 Debugger.enable
+web-control debug session send debug-1 Debugger.setBreakpointByUrl \
+  '{"url":"https://example.invalid/app.js","lineNumber":0}'
+web-control debug session events debug-1 0 100 5000
+web-control debug session send debug-1 Debugger.evaluateOnCallFrame \
+  '{"callFrameId":"<observed-frame-id>","expression":"2 + 3","returnByValue":true}'
+web-control debug session send debug-1 Debugger.resume
+web-control debug session close debug-1
+```
+
+A session is owned by the running controller, **not** a `web-control` client process: it remains attached across separate CLI calls and page navigation. Open requires an existing page identity and permits one managed session per page. `send` returns `{session,result}`. `events` returns `{session,after,lastSequence,events:[{sequence,method,params},...]}`, with monotonically increasing event numbers and optional bounded long polling; resume using the last received event's `sequence`. Events are held in memory (128 events, 4 MiB total, 1 MiB/event) and outdated cursors produce `debug.events-overflow` rather than hidden loss. A page/browser/controller close or externally detached debugger invalidates the session. `debug.session-not-found` is returned for stale identities.
+
+The implementation uses the provider's native CDP bridge; there is no raw debugging TCP listener. It accepts CDP method names and JSON parameters because both current providers use Chromium. This is a privileged local control surface: debugger events may contain private page data and must not be written to public logs or forwarded to untrusted clients. The historical single-command `web-control debug cdp` form remains available for compatibility but does **not** hold a session across calls.
+
