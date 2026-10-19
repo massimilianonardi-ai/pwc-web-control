@@ -15,3 +15,8 @@ export function webControlSocketPath(env = process.env) {
   const key = crypto.createHash('sha256').update(home).digest('hex').slice(0, 16);
   return path.join('/tmp', `rumiai-web-control-${uid}-${key}.sock`);
 }
+
+// Explicit per-service Playwright context opt-in; secure by default.
+export function webControlIgnoreHTTPSErrors(env = process.env) {
+  return env.WEB_CONTROL_IGNORE_HTTPS_ERRORS === '1';
+}
