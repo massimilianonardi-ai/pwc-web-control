@@ -3,7 +3,7 @@ import net from 'node:net';
 import path from 'node:path';
 import process from 'node:process';
 import { chromium } from 'playwright';
-import { webControlHome, webControlSocketPath } from './runtime.mjs';
+import { webControlHome, webControlSocketPath, webControlIgnoreHTTPSErrors } from './runtime.mjs';
 import { DebugSessions } from './debug-sessions.mjs';
 
 const HOME = webControlHome();
@@ -13,6 +13,7 @@ const PROFILE_DIR = process.env.WEB_CONTROL_PROFILE_DIR || path.join(HOME, 'prof
 const STORAGE_DIR = path.join(HOME, 'storage-state');
 const STORAGE_FILE = path.join(STORAGE_DIR, `${PROFILE}.json`);
 const HEADLESS = process.env.WEB_CONTROL_HEADLESS === '1';
+const IGNORE_HTTPS_ERRORS = webControlIgnoreHTTPSErrors();
 const EXECUTABLE = process.env.WEB_CONTROL_BROWSER_EXECUTABLE || undefined;
 const BROWSER_ARGS = process.env.WEB_CONTROL_BROWSER_ARGS ? JSON.parse(process.env.WEB_CONTROL_BROWSER_ARGS) : [];
 
@@ -67,10 +68,14 @@ function registerPage(page) {
 }
 
 async function launchBrowser() {
+  if (IGNORE_HTTPS_ERRORS) {
+    process.stderr.write('[warn] web-control: ignoreHTTPSErrors enabled (explicit opt-in); HTTPS certificate verification disabled for this context.\n');
+  }
   const launchedContext = await chromium.launchPersistentContext(PROFILE_DIR, {
     headless: HEADLESS,
     executablePath: EXECUTABLE,
     chromiumSandbox: true,
+    ignoreHTTPSErrors: IGNORE_HTTPS_ERRORS,
     handleSIGHUP: false,
     handleSIGINT: false,
     handleSIGTERM: false,
