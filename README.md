@@ -29,6 +29,8 @@ The package launcher supplies an isolated package HOME. `web-control-service` st
 
 The ordinary browser mode is visible (`headless=false`). `WEB_CONTROL_HEADLESS=1` exists for automated validation and non-graphical environments. Chromium sandboxing is explicitly enabled by default; provider-specific custom browser arguments remain an explicit escape hatch and are not the normal package mode.
 
+**Playwright certificate validation:** The Chromium context verifies HTTPS certificates by default. The privileged provider-specific environment variable `WEB_CONTROL_IGNORE_HTTPS_ERRORS=1` explicitly sets Playwright's `ignoreHTTPSErrors: true` for that service's browser context. All other values preserve `false`. This weakens HTTPS server identity verification for every page in that context, so it must only be used in a deliberately isolated, disposable browser session, never enabled by default for a shared or production service. The provider does not disable Chromium sandboxing or change Node/npm TLS validation when this option is used.
+
 `web-control-service` is the long-running controller lifecycle; Chromium is a subordinate managed runtime. If the browser application is closed manually or exits unexpectedly, the service remains active and `web-control status` reports `browserRunning: false`. The browser is recreated on demand by the next `web-control page new`, using the same persistent profile; prior live page identities are not preserved. Closing an individual page through `web-control page close` closes only that page.
 
 The released package depends on provider-independent runtime facilities:
