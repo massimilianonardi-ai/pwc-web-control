@@ -7,7 +7,7 @@
     "node": ">=26 <27"
   },
   "scripts": {
-    "test": "node --test tests/debug-sessions.test.mjs && node tests/run.mjs",
+    "test": "node --test tests/*.test.mjs && node tests/run.mjs",
     "build": "node scripts/build-release.mjs"
   },
   "dependencies": {
